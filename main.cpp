@@ -42,10 +42,10 @@ static void read_msr(DWORD msr_register, DWORD &msr_register_low, DWORD &msr_reg
   msr_register_low = 0xDEADBEEF;
   msr_register_high = 0xCAFEFEED;
   __asm volatile(
-  "mov %[MSR_REGISTER], %%ecx\n\t"
+  "movl %[MSR_REGISTER], %%ecx\n\t"
   "rdmsr\n\t"
-  "mov %%eax, %[MSRLO]\n\t"
-  "mov %%edx, %[MSRHI]\n\t"
+  "movl %%eax, %[MSRLO]\n\t"
+  "movl %%edx, %[MSRHI]\n\t"
   : [MSRLO] "=rm"(msr_register_low), [MSRHI] "=rm"(msr_register_high)
   : [MSR_REGISTER] "r"(msr_register)
   : "%eax", "%ecx", "%edx"
@@ -98,10 +98,10 @@ static BOOL dump_cpuid_results(const char *file_path) {
     __asm volatile(
         "mov %[mode_select], %%eax\n\t"
         "cpuid\n\t"
-        "mov %%eax, %[EAX]\n\t"
-        "mov %%ebx, %[EBX]\n\t"
-        "mov %%ecx, %[ECX]\n\t"
-        "mov %%edx, %[EDX]\n\t"
+        "movl %%eax, %[EAX]\n\t"
+        "movl %%ebx, %[EBX]\n\t"
+        "movl %%ecx, %[ECX]\n\t"
+        "movl %%edx, %[EDX]\n\t"
         : [EAX] "=rm"(EAX), [EBX] "=rm"(EBX), [ECX] "=rm"(ECX), [EDX] "=rm"(EDX)
         : [mode_select] "r"(mode)
         : "%eax", "%ebx", "%ecx", "%edx");

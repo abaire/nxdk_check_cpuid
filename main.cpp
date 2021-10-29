@@ -33,6 +33,26 @@ static void display_screen(const char *text) {
     ;
 }
 
+static const DWORD IA32_PLATFORM_ID = 0x17;
+static const DWORD EBL_CR_POWERON = 0x2A;
+// Not supported on Pentium III processors.
+//static const DWORD IA32_MISC_ENABLE = 0x1A0;
+
+static void read_msr(DWORD msr_register, DWORD &msr_register_low, DWORD &msr_register_high) {
+  msr_register_low = 0xDEADBEEF;
+  msr_register_high = 0xCAFEFEED;
+  __asm volatile(
+  "mov %[MSR_REGISTER], %%ecx\n\t"
+  "rdmsr\n\t"
+  "mov %%eax, %[MSRLO]\n\t"
+  "mov %%edx, %[MSRHI]\n\t"
+  : [MSRLO] "=rm"(msr_register_low), [MSRHI] "=rm"(msr_register_high)
+  : [MSR_REGISTER] "r"(msr_register)
+  : "%eax", "%ecx", "%edx"
+  );
+
+}
+
 static BOOL dump_cpuid_results(const char *file_path) {
   HANDLE file = CreateFile(file_path, GENERIC_WRITE, FILE_SHARE_READ, nullptr,
                            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -43,6 +63,28 @@ static BOOL dump_cpuid_results(const char *file_path) {
 
   BOOL ret = TRUE;
   char output_buffer[256] = {0};
+
+  // Read the MSR register to see if IA32_MISC_ENABLE.BOOT_NT4 (aka .LCMV) is
+  // set. If it is, cpuid leaves higher than 0x03 will all return the same info
+  // as 0x03.
+  DWORD msr_register_low = 0;
+  DWORD msr_register_high = 0;
+  read_msr(IA32_PLATFORM_ID, msr_register_low, msr_register_high);
+  snprintf(output_buffer, 255, "IA32_PLATFORM_ID: 0x%08X%08X", msr_register_high, msr_register_low);
+  DbgPrint(output_buffer);
+  // XBOX 1.0: 0x2510000000000000
+
+  read_msr(EBL_CR_POWERON, msr_register_low, msr_register_high);
+  snprintf(output_buffer, 255, "EBL_CR_POWERON: 0x%08X%08X", msr_register_high, msr_register_low);
+  DbgPrint(output_buffer);
+  // XBOX 1.0: 0x00000000C5040000
+
+  // Triggers a first chance exception because this register does not exist in
+  // PIII processors (the doc lists it as Pentium 4:
+  // http://datasheets.chipdb.org/Intel/x86/CPUID/24161821.pdf).
+//  read_msr(IA32_MISC_ENABLE, msr_register_low, msr_register_high);
+//  snprintf(output_buffer, 255, "IA32_MISC_ENABLE: 0x%08X%08X", msr_register_high, msr_register_low);
+//  DbgPrint(output_buffer);
 
   int num_modes = sizeof(eax_values) / sizeof(eax_values[0]);
   for (auto i = 0; i < num_modes; ++i) {
